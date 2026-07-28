@@ -79,30 +79,54 @@ def parse_hobo_xlsx(path: Path) -> list[tuple[str, float, float]]:
     Returns list of (iso_datetime, temp_f, temp_c).
 
     HOBO exports: row 1 = title, row 2 = header (units embedded in column
-    name), data from row 3. Column position (datetime=col B, temp=col C)
-    is more stable across exports than the exact header text -- but this
-    is unverified against a real #tgif file. Adjust skiprows/columns after
-    the first real run if the shape is different.
+    name, e.g. "Temp, deg F (LGR S/N: ...)" or "Temp, deg C (...)"), data
+    from row 3. Column position (datetime=col B, temp=col C) is more
+    stable across exports than the exact header text, but the UNIT is
+    not fixed -- HOBO loggers can be configured in either F or C, and at
+    least one real #tgif file logs in Celsius. Confirmed 2026-07-28:
+    treating a Celsius file as Fahrenheit produced implausible 17-22
+    degree "water temps" instead of a correct, plausible 63-72F. Read
+    the header text per file instead of assuming a fixed unit.
     """
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
     ws = wb.active
 
+    is_celsius = None
     rows = []
     for i, row in enumerate(ws.iter_rows(values_only=True)):
-        if i < 2:  # skip title + header rows
+        if i == 1:  # header row -- detect unit from column 3's label
+            header = str(row[2]) if len(row) > 2 and row[2] is not None else ""
+            if "°C" in header or "deg C" in header or "Celsius" in header:
+                is_celsius = True
+            elif "°F" in header or "deg F" in header or "Fahrenheit" in header:
+                is_celsius = False
+            else:
+                print(
+                    f"  WARNING: could not detect temp unit from header "
+                    f"'{header}' in {path.name} -- assuming Fahrenheit. Verify manually.",
+                    file=sys.stderr,
+                )
+                is_celsius = False
+            continue
+        if i < 2:  # skip title row
             continue
         if len(row) < 3 or row[1] is None or row[2] is None:
             continue
-        dt_raw, temp_f = row[1], row[2]
+        dt_raw, temp_raw = row[1], row[2]
         try:
-            temp_f = float(temp_f)
+            temp_raw = float(temp_raw)
         except (TypeError, ValueError):
             continue
         if isinstance(dt_raw, datetime):
             dt_iso = dt_raw.isoformat()
         else:
             continue  # unparsed datetime formats logged for manual review
-        temp_c = (temp_f - 32) * 5 / 9
+        if is_celsius:
+            temp_c = temp_raw
+            temp_f = temp_raw * 9 / 5 + 32
+        else:
+            temp_f = temp_raw
+            temp_c = (temp_raw - 32) * 5 / 9
         rows.append((dt_iso, round(temp_f, 2), round(temp_c, 2)))
     wb.close()
     return rows

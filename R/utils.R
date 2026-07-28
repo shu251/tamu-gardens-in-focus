@@ -161,11 +161,23 @@ fetch_nws_latest <- function(station = "KCLL") {
 read_hobo_xlsx <- function(path) {
   raw <- readxl::read_excel(path, skip = 1)
 
+  temp_header <- names(raw)[3]
+  is_celsius <- str_detect(temp_header, "\u00b0\\s*C|deg\\s*C|Celsius")
+  is_fahrenheit <- str_detect(temp_header, "\u00b0\\s*F|deg\\s*F|Fahrenheit")
+
+  if (!is_celsius && !is_fahrenheit) {
+    warning(
+      "Could not detect temperature unit from header '", temp_header,
+      "' in ", basename(path), " -- assuming Fahrenheit. Verify manually."
+    )
+    is_fahrenheit <- TRUE
+  }
+
   raw |>
     rename(
       record = 1,
       datetime_raw = 2,
-      temp_f = 3
+      temp_raw = 3
     ) |>
     mutate(
       # readxl already parses Excel datetime cells into POSIXct/Date. Routing
@@ -183,8 +195,14 @@ read_hobo_xlsx <- function(path) {
           tz = "America/Chicago"
         )
       },
-      temp_f = as.numeric(temp_f),
-      temp_c = (temp_f - 32) * 5 / 9
+      temp_raw = as.numeric(temp_raw),
+      # HOBO loggers can be configured to log in either unit -- the header
+      # text is the only reliable signal per file, not a fixed assumption.
+      # Confirmed 2026-07-28: at least one real #tgif file logs in Celsius;
+      # treating it as Fahrenheit produced water temps of 17-22 degrees,
+      # which is implausible, vs. a correct and very plausible 63-72F.
+      temp_f = if (is_fahrenheit) temp_raw else temp_raw * 9 / 5 + 32,
+      temp_c = if (is_celsius) temp_raw else (temp_raw - 32) * 5 / 9
     ) |>
     filter(!is.na(datetime), !is.na(temp_f)) |>
     select(datetime, temp_f, temp_c) |>
