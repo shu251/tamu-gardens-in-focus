@@ -4,7 +4,7 @@ Environmental monitoring dashboard for the Hu Lab garden site: White Creek
 water temperature (HOBO logger), Brazos River gage height (USGS), and
 weather (NWS station KCLL).
 
-Site: https://shu251.github.io/tamu-gardens-timeseries/
+Site: https://shu251.github.io/tamu-gardens-in-focus/
 
 ## Structure
 
