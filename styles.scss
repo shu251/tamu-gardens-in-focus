@@ -1,0 +1,26 @@
+/*-- scss:defaults --*/
+$font-family-sans-serif: "Helvetica Neue", Helvetica, Arial, sans-serif !default;
+$body-bg: #ffffff !default;
+$body-color: #1a1a1a !default;
+$navbar-bg: #ffffff !default;
+$navbar-fg: #1a1a1a !default;
+$link-color: #2b6cb0 !default;
+
+/*-- scss:rules --*/
+.card {
+  border: 1px solid #e5e5e5;
+  box-shadow: none;
+}
+
+.card-title {
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.valuebox {
+  font-family: $font-family-sans-serif;
+}
+
+.dashboard-title {
+  font-weight: 400;
+}

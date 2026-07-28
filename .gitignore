@@ -1,0 +1,18 @@
+# raw HOBO exports -- binary, large, and reproducible from Slack; only the
+# parsed CSV in data/garden/ is tracked
+data/garden/raw/*.xlsx
+
+# R
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+renv/library/
+renv/local/
+renv/staging/
+
+# Quarto
+/.quarto/
+*_files/
+
+**/*.quarto_ipynb

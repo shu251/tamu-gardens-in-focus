@@ -1,0 +1,14 @@
+project:
+  type: default
+  output-dir: docs
+
+execute:
+  freeze: auto      # only re-run R chunks when .qmd or its inputs change
+  echo: false        # this is a public dashboard, not a code notebook
+  warning: false
+
+format:
+  dashboard:
+    theme: [cosmo, styles.scss]
+    nav-buttons: [github]
+    embed-resources: true   # single self-contained HTML file, easiest to host
