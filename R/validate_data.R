@@ -25,11 +25,13 @@ if (nrow(wc) == 0) {
     pass("temp_f within plausible range (32-100°F)")
   }
   gap_days <- as.numeric(difftime(Sys.time(), max(wc$datetime), units = "days"))
-  if (gap_days > 21) warn(paste0("latest reading is ", round(gap_days), " days old -- sync may be stale"))
+  # 21 days was an arbitrary guess and fired a false positive on every real
+  # run so far -- actual upload cadence is 1-5 weeks between HOBO downloads.
+  if (gap_days > 45) warn(paste0("latest reading is ", round(gap_days), " days old -- sync may be stale"))
 }
 
 cat("\n== Brazos River gage height (USGS) ==\n")
-river <- fetch_usgs_gage_height("USGS-08109500", start = Sys.Date() - 7, end = Sys.Date())
+river <- fetch_usgs_gage_height("USGS-08108700", start = Sys.Date() - 7, end = Sys.Date())
 if (nrow(river) == 0) {
   warn("USGS OGC API returned 0 rows for the last 7 days -- check site ID, parameter code, or endpoint status")
 } else {

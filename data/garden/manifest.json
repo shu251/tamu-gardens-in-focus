@@ -1,14 +1,44 @@
 {
   "channel_id": "C0AGSKQS5PY",
-  "last_sync": null,
-  "record_count": 0,
+  "last_sync": "2026-07-28T23:05:36.980532+00:00",
+  "record_count": 2403,
   "synced_files": {
-    "F0AH29ZHSVB": { "name": "C - 35 2026-02-25 14_21_35 CST (Data CST).xlsx", "status": "pending" },
-    "F0AHY5SJH1U": { "name": "C - 35 2026-03-02 08_49_11 CST (Data CST).xlsx", "status": "pending" },
-    "F0AMH0Q3RCZ": { "name": "C - 35 2026-03-17 08_59_00 CDT (Data CDT).xlsx", "status": "pending" },
-    "F0BEDBJAZT9": { "name": "C - 35 2026-04-17 08_39_38 CDT (Data CDT).xlsx", "status": "pending" },
-    "F0BGC5FB2GH": { "name": "C - 35 2026-05-20 09_08_05 CDT (Data CDT).xlsx", "status": "pending" },
-    "F0BG6SAD6BX": { "name": "C - 35 2026-06-25 09_24_26 CDT (Data CDT).xlsx", "status": "pending" }
+    "F0AH29ZHSVB": {
+      "name": "C - 35 2026-02-25 14_21_35 CST (Data CST).xlsx",
+      "synced_at": "2026-07-28T23:05:36.966631+00:00",
+      "status": "synced",
+      "record_count": 1
+    },
+    "F0AHY5SJH1U": {
+      "name": "C - 35 2026-03-02 08_49_11 CST (Data CST).xlsx",
+      "synced_at": "2026-07-28T23:05:36.467909+00:00",
+      "status": "synced",
+      "record_count": 1
+    },
+    "F0AMH0Q3RCZ": {
+      "name": "C - 35 2026-03-17 08_59_00 CDT (Data CDT).xlsx",
+      "synced_at": "2026-07-28T23:05:35.941663+00:00",
+      "status": "synced",
+      "record_count": 1
+    },
+    "F0BEDBJAZT9": {
+      "name": "C - 35 2026-04-17 08_39_38 CDT (Data CDT).xlsx",
+      "synced_at": "2026-07-28T23:05:35.378850+00:00",
+      "status": "synced",
+      "record_count": 744
+    },
+    "F0BGC5FB2GH": {
+      "name": "C - 35 2026-05-20 09_08_05 CDT (Data CDT).xlsx",
+      "synced_at": "2026-07-28T23:05:34.174519+00:00",
+      "status": "synced",
+      "record_count": 1537
+    },
+    "F0BG6SAD6BX": {
+      "name": "C - 35 2026-06-25 09_24_26 CDT (Data CDT).xlsx",
+      "synced_at": "2026-07-28T23:05:34.837582+00:00",
+      "status": "synced",
+      "record_count": 2401
+    }
   },
   "note": "Seeded from a channel read on 2026-07-12. Not yet synced -- run scripts/sync_garden_data.py with a real SLACK_BOT_TOKEN to pull actual data and flip these to 'synced'."
 }

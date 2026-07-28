@@ -43,7 +43,7 @@ is set as a repo secret. No manual step required for a normal week.
    updates whenever you render next.
 
 To force a sync without waiting for Friday: Actions tab > "Sync garden
-data" > Run workflow. Or run `python scripts/sync_garden_data.py` locally
+data" > Run workflow. Or run `python3 scripts/sync_garden_data.py` locally
 with `SLACK_BOT_TOKEN` set.
 
 ### Troubleshooting
@@ -64,7 +64,17 @@ the legacy NWIS endpoint; confirm `fetch_usgs_gage_height()` in
 `R/utils.R` is still pointed at
 `api.waterdata.usgs.gov/ogcapi/v0/collections/continuous`, not the old
 `waterservices.usgs.gov` URL. Site ID must include the `USGS-` prefix
-(`USGS-08109500`, not `08109500`) -- the OGC API rejects the bare number.
+(`USGS-08108700`, not `08108700`) -- the OGC API rejects the bare number.
+
+Also: the site is `USGS-08108700` ("Brazos Rv at SH 21 nr Bryan, TX"),
+**not** `USGS-08109500` ("Brazos Rv nr College Station, TX" -- the name
+that actually matches this project). Confirmed 2026-07-28 via
+`time-series-metadata`: 08109500 has zero indexed time series for any
+parameter right now, so it returns nothing no matter how the query is
+built. 08108700 is close by on the same river and does have live gage
+height data. If you'd rather use 08109500 for the name match, check
+whether USGS has restored it before switching back
+(`https://waterdata.usgs.gov/monitoring-location/USGS-08109500/`).
 
 **Weather page shows "not reported" for precip.** Not a bug. NWS returns
 `null` for precipitation more often than it returns `0` -- `null` means
@@ -86,7 +96,7 @@ exported in your local shell.
 Rscript -e 'install.packages(c("tidyverse","httr2","plotly","readxl"))'
 
 # Python (for the sync script, if running locally)
-pip install slack_sdk openpyxl requests
+pip3 install slack_sdk openpyxl requests
 ```
 
 Quarto CLI: https://quarto.org/docs/get-started/
@@ -101,7 +111,7 @@ row until you run this.
    install it to the Hu Lab workspace, invite it to `#tgif`.
 2. Set `SLACK_BOT_TOKEN` locally and run:
    ```bash
-   python scripts/sync_garden_data.py
+   python3 scripts/sync_garden_data.py
    ```
 3. Check `data/garden/manifest.json` -- all 6 files should flip to `"synced"`.
 4. Add `SLACK_BOT_TOKEN` as a repo secret (Settings > Secrets and variables >
@@ -154,6 +164,17 @@ This has now actually been run, not just written. In a sandbox with R
   not a crash) when the API is unreachable, and that the dashboard still
   renders with "unavailable" placeholders on those pages instead of
   erroring out.
+- Added `flag_air_exposure()` (R/utils.R): filters readings outside a
+  plausible 32-100°F range from the White Creek chart and valueboxes,
+  without ever modifying the source CSV. Confirmed 2026-07-28 against
+  real data: 2 of 2403 readings hit 102-106°F, both mid-afternoon on
+  different dates -- the signature of the logger sitting above a low
+  waterline in direct sun, not a parsing error. The dashboard now shows
+  a visible note ("N readings excluded...") rather than silently
+  dropping them or plotting a misleading spike. Verified end-to-end with
+  injected synthetic spikes: filter removes exactly the injected points,
+  raw CSV keeps them intact, rendered HTML shows the correct count and
+  wording.
 
 **Hard blocker, confirmed, not fixable from a Claude sandbox:**
 `api.waterdata.usgs.gov`, `api.weather.gov`, and Slack are all outside
@@ -170,6 +191,12 @@ quarto render
 ```
 
 Outputs to `docs/`. Preview locally with `quarto preview` before rendering.
+
+If a degree symbol ever renders as `<U+00B0>` instead of °, that's a
+locale issue, not a code bug -- confirmed in a sandbox defaulting to a
+POSIX/C locale. Render with `LC_ALL=en_US.UTF-8 quarto render` if it
+happens. macOS defaults to UTF-8 already, so this is unlikely on your
+machine, but here if needed.
 
 ## New repo setup
 

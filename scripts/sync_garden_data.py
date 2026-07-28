@@ -4,19 +4,21 @@ sync_garden_data.py
 Pulls new HOBO logger .xlsx exports from the #tgif Slack channel, parses
 them, and appends tidy records to data/garden/white_creek_temp.csv.
 Tracks which files have already been processed in data/garden/manifest.json
-so re-runs are idempotent (safe to run every Friday via GitHub Actions).
+so re-downloading is idempotent (safe to run every Friday via GitHub
+Actions). Confirmed 2026-07-28: HOBO exports are cumulative -- each new
+file re-exports the logger's full history, not just what's new since the
+last download -- so a dedupe pass runs after every sync (see dedupe_csv()).
 
 Requires:
     SLACK_BOT_TOKEN   env var, scopes: channels:history, files:read
-    pip install slack_sdk openpyxl
+    pip3 install slack_sdk openpyxl
 
 Binary .xlsx content cannot be read through the Slack MCP tool used in
 chat sessions -- this script, run with a real bot token (locally or in
 GitHub Actions), is the only path that actually reads the file bytes.
-Nothing here has been run against a real HOBO file yet. Test locally with
-SLACK_BOT_TOKEN set before trusting the GitHub Actions run.
 """
 
+import csv
 import json
 import os
 import sys
@@ -78,15 +80,18 @@ def parse_hobo_xlsx(path: Path) -> list[tuple[str, float, float]]:
     """
     Returns list of (iso_datetime, temp_f, temp_c).
 
-    HOBO exports: row 1 = title, row 2 = header (units embedded in column
-    name, e.g. "Temp, deg F (LGR S/N: ...)" or "Temp, deg C (...)"), data
-    from row 3. Column position (datetime=col B, temp=col C) is more
-    stable across exports than the exact header text, but the UNIT is
-    not fixed -- HOBO loggers can be configured in either F or C, and at
-    least one real #tgif file logs in Celsius. Confirmed 2026-07-28:
-    treating a Celsius file as Fahrenheit produced implausible 17-22
-    degree "water temps" instead of a correct, plausible 63-72F. Read
-    the header text per file instead of assuming a fixed unit.
+    Confirmed 2026-07-28 against a real #tgif file: there is NO title row.
+    Row 0 is the header itself (e.g. "#", "Date-Time (CDT)",
+    "Temperature , deg C", "Light , lux"), data starts at row 1. Column
+    position (datetime=col B, temp=col C) matches; the earlier
+    title-row-then-header-row assumption was wrong and silently dropped
+    row 0 (the real header) while misreading row 1 (the first real
+    reading) as the header -- confirmed by header text showing up as a
+    bare float like "19.73140625" instead of a column label.
+
+    Unit is also not fixed -- HOBO loggers can be configured in either F
+    or C, and at least one real #tgif file logs in Celsius. Read the
+    header text per file instead of assuming a fixed unit.
     """
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
     ws = wb.active
@@ -94,7 +99,7 @@ def parse_hobo_xlsx(path: Path) -> list[tuple[str, float, float]]:
     is_celsius = None
     rows = []
     for i, row in enumerate(ws.iter_rows(values_only=True)):
-        if i == 1:  # header row -- detect unit from column 3's label
+        if i == 0:  # header row -- detect unit from column 3's label
             header = str(row[2]) if len(row) > 2 and row[2] is not None else ""
             if "°C" in header or "deg C" in header or "Celsius" in header:
                 is_celsius = True
@@ -107,8 +112,6 @@ def parse_hobo_xlsx(path: Path) -> list[tuple[str, float, float]]:
                     file=sys.stderr,
                 )
                 is_celsius = False
-            continue
-        if i < 2:  # skip title row
             continue
         if len(row) < 3 or row[1] is None or row[2] is None:
             continue
@@ -141,6 +144,31 @@ def append_to_csv(rows: list[tuple[str, float, float]]) -> int:
         for dt_iso, temp_f, temp_c in rows:
             f.write(f"{dt_iso},{temp_f},{temp_c}\n")
     return len(rows)
+
+
+def dedupe_csv() -> tuple[int, int]:
+    """
+    Rewrite the CSV keeping one row per datetime (last write wins).
+
+    HOBO exports are cumulative -- each file re-exports the logger's full
+    history, so successive syncs produce heavily overlapping rows (e.g.
+    6 real files -> 4679 raw rows / 2400 unique). Dedupe after each sync
+    rather than trying to prevent overlap while appending.
+
+    Returns (rows_before, rows_after).
+    """
+    if not CSV_PATH.exists():
+        return (0, 0)
+    with open(CSV_PATH, newline="") as f:
+        rows = list(csv.DictReader(f))
+    before = len(rows)
+    deduped = {row["datetime"]: row for row in rows}  # last occurrence wins
+    after_rows = sorted(deduped.values(), key=lambda r: r["datetime"])
+    with open(CSV_PATH, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=["datetime", "temp_f", "temp_c"])
+        writer.writeheader()
+        writer.writerows(after_rows)
+    return (before, len(after_rows))
 
 
 def main() -> int:
@@ -186,8 +214,13 @@ def main() -> int:
                 "error": str(e),
             }
 
+    before, after = dedupe_csv()
+    manifest["record_count"] = after
     save_manifest(manifest)
-    print(f"Done. {new_total} new records synced.")
+    print(f"Done. {new_total} raw records synced this run.")
+    if before != after:
+        print(f"Dedup: {before} rows -> {after} unique rows in white_creek_temp.csv "
+              f"({before - after} overlapping rows removed, expected -- HOBO exports are cumulative).")
     return 0
 
 

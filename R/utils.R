@@ -18,7 +18,18 @@ library(lubridate)
 #' Uses the "continuous" collection, which replaced the legacy NWIS
 #' instantaneous-values service (decommissioned 2026-2027). See:
 #' https://api.waterdata.usgs.gov/docs/ogcapi/
-fetch_usgs_gage_height <- function(site_id = "USGS-08109500",
+#'
+#' Site USGS-08108700 ("Brazos Rv at SH 21 nr Bryan, TX"), not
+#' USGS-08109500 ("Brazos Rv nr College Station, TX" -- the name that
+#' actually matches the site). Confirmed 2026-07-28: 08109500 returns zero
+#' results from time-series-metadata for every parameter, meaning it has
+#' no time series currently indexed in this API at all (discontinued or
+#' not yet migrated -- unclear which). 08108700 is close by, on the same
+#' river, and has an active gage-height series confirmed via the same
+#' metadata check (parameter_code 00065, last_modified 2026-07-15) plus
+#' active discharge data through 2026-07-26. If USGS restores 08109500,
+#' or a closer active site turns up, swap the default here.
+fetch_usgs_gage_height <- function(site_id = "USGS-08108700",
                                     start = Sys.Date() - 30,
                                     end = Sys.Date(),
                                     parameter_code = "00065") {
@@ -159,7 +170,13 @@ fetch_nws_latest <- function(station = "KCLL") {
 #' this against a real export before relying on it -- I have not been able
 #' to open one of the actual `#tgif` files in this session.
 read_hobo_xlsx <- function(path) {
-  raw <- readxl::read_excel(path, skip = 1)
+  # Confirmed 2026-07-28 against a real #tgif file: there is NO title row.
+  # Row 0 is the header itself (e.g. "#", "Date-Time (CDT)",
+  # "Temperature , deg C", "Light , lux"), data starts at row 1. The
+  # earlier skip=1 assumption (title row, then header row) was wrong and
+  # silently dropped the header row AND treated the first data row as
+  # the header -- do not skip anything here.
+  raw <- readxl::read_excel(path)
 
   temp_header <- names(raw)[3]
   is_celsius <- str_detect(temp_header, "\u00b0\\s*C|deg\\s*C|Celsius")
@@ -223,4 +240,22 @@ load_white_creek_temp <- function(dir = "data/garden") {
   )) |>
     distinct(datetime, .keep_all = TRUE) |>
     arrange(datetime)
+}
+
+#' Flag readings outside a plausible water-temperature range as likely
+#' logger air exposure (low water level + direct sun), not real water
+#' temp. Confirmed 2026-07-28: 2 of 2403 real readings hit 102-106F, both
+#' mid-afternoon on different dates -- the signature of a sensor exposed
+#' above the waterline during peak heat, not a parsing error.
+#'
+#' This does NOT modify the source CSV -- raw synced data stays intact.
+#' It only filters what the dashboard plots and reports, so a flagged
+#' reading shows as a gap in the chart rather than a misleading spike or
+#' a silently connected line across it. Returns the input with flagged
+#' rows removed and a `n_excluded` attribute for reporting the count.
+flag_air_exposure <- function(df, low_f = 32, high_f = 100) {
+  excluded <- df |> filter(temp_f < low_f | temp_f > high_f)
+  kept <- df |> filter(temp_f >= low_f & temp_f <= high_f)
+  attr(kept, "n_excluded") <- nrow(excluded)
+  kept
 }
