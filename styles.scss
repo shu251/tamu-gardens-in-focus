@@ -1,0 +1,75 @@
+/*-- scss:defaults --*/
+$font-family-sans-serif: "Helvetica Neue", Helvetica, Arial, sans-serif !default;
+$body-bg: #ffffff !default;
+$body-color: #1a1a1a !default;
+$navbar-bg: #ffffff !default;
+$navbar-fg: #1a1a1a !default;
+$link-color: #500000 !default;   // TAMU maroon
+
+/*-- scss:rules --*/
+
+// Palette reference (also used as literal hex in R chart code, since
+// ggplot color aesthetics can't read SCSS variables):
+//   #500000  TAMU maroon    -- brand chrome: navbar accents, titles
+//   #A46D51  terracotta     -- data ink: all chart lines, valuebox icons
+//   #F8F0D2  cream          -- valuebox background
+//   #CACBB4  sage           -- card borders
+//   #E8CEC6  blush          -- exclusion-note callout background
+// CACBB4/E8CEC6/F8F0D2 are too pale for line/data-ink use on a white
+// background (poor contrast) -- reserved for backgrounds/borders instead.
+
+.card {
+  border: 1px solid #CACBB4;
+  box-shadow: none;
+}
+
+.card-title {
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.valuebox {
+  font-family: $font-family-sans-serif;
+}
+
+.dashboard-title {
+  font-weight: 400;
+  color: #500000;
+}
+
+// Navbar: maroon underline on the active tab
+.navbar {
+  border-bottom: 2px solid #500000;
+}
+
+.navbar .nav-link.active,
+.navbar .nav-link[aria-current="page"] {
+  color: #500000 !important;
+  border-bottom: 2px solid #500000;
+}
+
+// Valuebox background + text/icon color, replacing the default bslib gray
+.card.valuebox.bg-light {
+  background-color: #F8F0D2 !important;
+  color: #500000 !important;
+}
+
+.card.valuebox.bg-light .bi {
+  color: #A46D51 !important;
+}
+
+// Air-exposure exclusion note (White Creek page) -- soft callout background
+.tgif-note {
+  background-color: #E8CEC6;
+  padding: 0.4em 0.75em;
+  border-radius: 0.25rem;
+  font-size: 0.85em;
+}
+
+/* Latest reading / As of / Records logged on the White Creek page --
+   these hold longer strings (full timestamps) than a typical valuebox
+   number, so the default size wraps awkwardly. Scoped to just these
+   three via the "compact-value" chunk class, not applied site-wide. */
+.compact-value .value-box-value {
+  font-size: 1.1rem !important;
+}
