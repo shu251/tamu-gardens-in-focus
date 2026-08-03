@@ -1,9 +1,4 @@
----
 
-editor: 
-  markdown: 
-    wrap: 72
----
 
 # TAMU Gardens in Focus
 
