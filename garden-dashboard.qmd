@@ -1,0 +1,201 @@
+---
+title: "TAMU Gardens in Focus"
+format:
+  dashboard:
+    theme: [cosmo, styles.scss]
+    embed-resources: true
+---
+
+```{r setup}
+#| include: false
+source("R/utils.R")
+
+usgs_site   <- "USGS-08108700"  # Brazos Rv at SH 21 nr Bryan, TX -- see R/utils.R for why not 08109500
+nws_station <- "KCLL"
+
+white_creek <- load_white_creek_temp("data/garden") |> flag_air_exposure()
+river       <- fetch_usgs_gage_height(usgs_site, start = Sys.Date() - 30, end = Sys.Date())
+weather_now <- fetch_nws_latest(nws_station)
+weather_hx  <- fetch_nws_observations(nws_station, n = 168)
+```
+
+# White Creek Temperature
+
+## Row {height=25%}
+
+```{r}
+#| content: valuebox
+#| title: "Latest reading"
+#| class: compact-value
+latest_temp <- white_creek |> slice_max(datetime, n = 1)
+list(
+  icon = "thermometer-half",
+  color = "light",
+  value = if (nrow(latest_temp) == 0) "no data yet" else paste0(round(latest_temp$temp_f, 1), " °F")
+)
+```
+
+```{r}
+#| content: valuebox
+#| title: "As of"
+#| class: compact-value
+list(
+  icon = "clock",
+  color = "light",
+  value = if (nrow(latest_temp) == 0) "--" else format(latest_temp$datetime, "%b %d, %Y %I:%M %p")
+)
+```
+
+```{r}
+#| content: valuebox
+#| title: "Records logged"
+#| class: compact-value
+list(
+  icon = "database",
+  color = "light",
+  value = format(nrow(white_creek), big.mark = ",")
+)
+```
+
+## Row
+
+```{r}
+#| title: "Water temperature over time"
+if (nrow(white_creek) == 0) {
+  plotly::plot_ly() |>
+    plotly::layout(
+      title = "No HOBO data synced yet -- run scripts/sync_garden_data.py",
+      xaxis = list(visible = FALSE), yaxis = list(visible = FALSE)
+    )
+} else {
+  p <- white_creek |>
+    ggplot(aes(x = datetime, y = temp_f)) +
+    geom_line(color = "#2b6cb0", linewidth = 0.5) +
+    labs(x = NULL, y = "Temperature (°F)") +
+    theme_minimal(base_family = "Helvetica")
+  plotly::ggplotly(p) |> plotly::layout(dragmode = "zoom")
+}
+```
+
+## Row {height=8%}
+
+```{r}
+#| output: asis
+n_excl <- attr(white_creek, "n_excluded")
+if (!is.null(n_excl) && n_excl > 0) {
+  cat(paste0(
+    "*", n_excl, " reading", if (n_excl != 1) "s" else "",
+    " excluded from this chart as likely sensor air exposure ",
+    "(outside 32-100°F -- logger exposed above waterline, not real water temp).*"
+  ))
+}
+```
+
+# Brazos River
+
+## Row {height=25%}
+
+```{r}
+#| content: valuebox
+#| title: "Latest gage height"
+latest_gage <- river |> slice_max(datetime, n = 1)
+list(
+  icon = "water",
+  color = "light",
+  value = if (nrow(latest_gage) == 0) "unavailable" else paste0(round(latest_gage$gage_height_ft, 2), " ft")
+)
+```
+
+```{r}
+#| content: valuebox
+#| title: "As of"
+list(
+  icon = "clock",
+  color = "light",
+  value = if (nrow(latest_gage) == 0) "--" else format(latest_gage$datetime, "%b %d, %Y %I:%M %p")
+)
+```
+
+```{r}
+#| content: valuebox
+#| title: "Station"
+list(icon = "geo-alt", color = "light", value = usgs_site)
+```
+
+## Row
+
+```{r}
+#| title: "Gage height, last 30 days"
+if (nrow(river) == 0) {
+  plotly::plot_ly() |>
+    plotly::layout(
+      title = "USGS OGC API returned no data for this window",
+      xaxis = list(visible = FALSE), yaxis = list(visible = FALSE)
+    )
+} else {
+  p <- river |>
+    ggplot(aes(x = datetime, y = gage_height_ft)) +
+    geom_line(color = "#2c7a5b", linewidth = 0.5) +
+    labs(x = NULL, y = "Gage height (ft)") +
+    theme_minimal(base_family = "Helvetica")
+  plotly::ggplotly(p) |> plotly::layout(dragmode = "zoom")
+}
+```
+
+# Weather
+
+## Row {height=25%}
+
+```{r}
+#| content: valuebox
+#| title: "Current temperature"
+list(
+  icon = "sun",
+  color = "light",
+  value = if (is.na(weather_now$temp_c[1])) "unavailable" else paste0(round(weather_now$temp_c * 9/5 + 32, 1), " °F")
+)
+```
+
+```{r}
+#| content: valuebox
+#| title: "Conditions"
+list(
+  icon = "cloud",
+  color = "light",
+  value = if (is.na(weather_now$description[1])) "unavailable" else weather_now$description
+)
+```
+
+```{r}
+#| content: valuebox
+#| title: "Precip, last hour"
+# NA here means "not reported by the station," not "no rain" -- do not
+# display as 0. This is the second bug fixed in the prior HTML version;
+# same trap applies to this data source in R.
+list(
+  icon = "cloud-rain",
+  color = "light",
+  value = if (is.na(weather_now$precip_mm[1])) "not reported" else paste0(round(weather_now$precip_mm, 1), " mm")
+)
+```
+
+## Row
+
+```{r}
+#| title: "Temperature, last 7 days (KCLL / Easterwood Field)"
+if (nrow(weather_hx) == 0) {
+  plotly::plot_ly() |>
+    plotly::layout(
+      title = "NWS API returned no data",
+      xaxis = list(visible = FALSE), yaxis = list(visible = FALSE)
+    )
+} else {
+  p <- weather_hx |>
+    mutate(temp_f = temp_c * 9/5 + 32) |>
+    ggplot(aes(x = datetime, y = temp_f)) +
+    geom_line(color = "#b7791f", linewidth = 0.5) +
+    labs(x = NULL, y = "Temperature (°F)") +
+    theme_minimal(base_family = "Helvetica")
+  plotly::ggplotly(p) |> plotly::layout(dragmode = "zoom")
+}
+```

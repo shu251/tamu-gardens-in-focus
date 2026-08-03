@@ -1,0 +1,21 @@
+project:
+  type: website
+  output-dir: docs
+
+website:
+  title: "TAMU Gardens in Focus"
+  navbar:
+    logo: images/tgif-hex.png
+    left:
+      - text: "Home"
+        href: tgif-home.qmd
+      - text: "Dashboard"
+        href: garden-dashboard.qmd
+    right:
+      - icon: github
+        href: https://github.com/shu251/tamu-gardens-timeseries
+
+execute:
+  freeze: auto      # only re-run R chunks when .qmd or its inputs change
+  echo: false        # this is a public dashboard, not a code notebook
+  warning: false
