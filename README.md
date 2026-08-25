@@ -19,6 +19,14 @@ Set up a `SLACK_BOT_TOKEN` to watch Slack #tgif channel.
 
 Git Actions tab \> "Sync garden data" \> Run workflow. Or run `python3 scripts/sync_garden_data.py` locally with `SLACK_BOT_TOKEN` set.
 
+
+## Actions
+
+1. Run `git pull`; Git actions pulls from Slack, updates .csv that holds all temp data. 
+2. Render in R, to update `docs/`; check rendered page.
+3. commit to github
+
+
 ## Structure
 
 ```         

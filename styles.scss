@@ -71,5 +71,5 @@ $link-color: #500000 !default;   // TAMU maroon
    number, so the default size wraps awkwardly. Scoped to just these
    three via the "compact-value" chunk class, not applied site-wide. */
 .compact-value .value-box-value {
-  font-size: 1.1rem !important;
+  font-size: 0.85rem !important;
 }
