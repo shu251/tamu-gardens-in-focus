@@ -11,6 +11,8 @@ website:
         href: tgif-home.qmd
       - text: "Dashboard"
         href: garden-dashboard.qmd
+      - text: "Environmental parameters"
+        href: environmental-parameters.qmd
     right:
       - icon: github
         href: https://github.com/shu251/tamu-gardens-timeseries
